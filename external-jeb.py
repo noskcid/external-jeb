@@ -10,7 +10,7 @@ import getpass
 debug = True
 
 # Load a module page from a URL.
-def get_module_page(url):
+def get_module_page(url, auth):
 	if debug:
 		# To be completed... right now open reference html locally.
 		try:
@@ -19,7 +19,8 @@ def get_module_page(url):
 			return False
 		return f.read()
 	else:
-		return False
+		return get_page(url, auth)
+		
 
 # Given a BeautifulSoup object of a module page, find all the files.
 def get_files(bs):
@@ -74,12 +75,13 @@ if __name__ == '__main__':
 		# Assume if no ref folder, the offline files need downloading.
 		if not isdir('ref'):
 			if not get_ref_debug_files():
-				raise Exception # Eurgh so crude. 
+				raise Exception # Eurgh so crude.
+		auth = False
 	else:
 		auth = get_auth()
 		
 	# Start by loading a module page into BeautifulSoup.
-	module = get_module_page('ref/module.html')
+	module = get_module_page('ref/module.html',auth)
 	if module:
 		bs = BeautifulSoup(module, 'html.parser')
 		# Get all the file URLs

@@ -1,7 +1,7 @@
 # external-jeb
-Auto-archiver for Internal Web
+Auto-archiver for Internal Web :metal:
 
-## Getting Started
+## Getting Started :joy:
 Clone this repository into local directory.
 
 `git clone https://github.com/noskcid/external-jeb`
@@ -14,4 +14,4 @@ Recreate the enviroment.
 
 Run the script.
 
-`python external-jeb.py`
+`python external-jeb.py` :ok_hand:

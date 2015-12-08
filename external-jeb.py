@@ -2,8 +2,8 @@ from bs4 import BeautifulSoup
 import re
 import requests
 from requests.auth import HTTPBasicAuth
-from os.path import isdir
-from os import mkdir
+from os.path import isdir, dirname
+from os import mkdir, makedirs
 import getpass
 
 # When in debug mode, avoids making requests, uses local copies instead.
@@ -20,17 +20,47 @@ def get_module_page(url, auth):
 		return f.read()
 	else:
 		return get_page(url, auth)
-		
+
+# Download the file from the given url to the file given by filename. 
+def download_file(url, filename, auth):
+	r = requests.get(url, auth=auth, stream=True)
+	if r.status_code == 200:
+		try:
+			f = open(filename, 'wb')
+		except IOError:
+			# Assume this is because the directory doesn't exist.
+			try:
+				# Make the directory.
+				makedirs(dirname(filename))
+				# Try again.
+				f = open(filename, 'wb')
+			except IOError:
+				return False
+		for chunk in r:
+			f.write(chunk)
+
+		f.close()
+		return True
+	else:
+		return False
+
+
+
+def file_get_last_modified(url, auth):
+	r = requests.get(url, auth=auth, stream=True)
+	if r.status_code == 200:
+		return r.headers['Last-Modified']
 
 # Given a BeautifulSoup object of a module page, find all the files.
 def get_files(bs):
 	links = bs.findAll('a')
 	file_re = re.compile('.*\.pdf')
+	files = []
 	for link in links:
 		# Check whether it links to file type of interest.
 		if file_re.match(str(link.get('href'))):
-			print link.get('href')
-	print "No. of links found: " + str(len(links))
+			files.append(link)
+	return files
 
 # Retrieve a live page.
 def get_page(url, auth):
@@ -84,8 +114,30 @@ if __name__ == '__main__':
 	module = get_module_page('ref/module.html',auth)
 	if module:
 		bs = BeautifulSoup(module, 'html.parser')
+		base_url = "https://www.elec.york.ac.uk/internal_web/meng/yr4/modules/Sig_Proc/Theory_and_Practice/"
 		# Get all the file URLs
-		get_files(bs)
+		files = get_files(bs)
+		
+		# Get the last file
+		last = files.pop()
+		
+		# Get its URL
+		rel_url = last.get('href')
+
+		# Create the full URL
+		url = base_url + rel_url
+		
+		# Get Authorisation details
+		auth = get_auth()
+		
+		# Download the file
+		filename = 'downloads/' + rel_url
+		lm = download_file(url, filename, auth)
+		if lm:
+			print "Successfully downloaded to: " + filename
+		else:
+			print "Download unsuccessful."
+
 	else:
 		print "Couldn't open file"
 	

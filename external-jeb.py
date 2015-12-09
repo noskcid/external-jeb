@@ -64,14 +64,14 @@ def file_get_last_modified(url, auth):
 	if r.status_code == 200:
 		return r.headers['Last-Modified']
 
-# Given a BeautifulSoup object of a module page, find all the files.
-def get_files(bs):
+# Given a BeautifulSoup object of a module page, find all the files whose
+# url matches the regex.
+def get_files(bs, type_re):
 	links = bs.findAll('a')
-	file_re = re.compile('.*\.pdf')
 	files = []
 	for link in links:
 		# Check whether it links to file type of interest.
-		if file_re.match(str(link.get('href'))):
+		if type_re.match(str(link.get('href'))):
 			files.append(link)
 	return files
 
@@ -132,8 +132,17 @@ if __name__ == '__main__':
 	if module:
 		bs = BeautifulSoup(module, 'html.parser')
 		base_url = "https://www.elec.york.ac.uk/internal_web/meng/yr4/modules/Sig_Proc/Theory_and_Practice/"
-		# Get all the file URLs
-		files = get_files(bs)
+
+		# Get Authorisation details
+		auth = get_auth()
+
+		# Compile regular expression to find PDFs.
+		type_re = re.compile('.*\.pdf')
+
+		# Get all the file URLs matching the regex.
+		files = get_files(bs, type_re)
+
+		print "Found {0} matching files.".format(len(files))
 		
 		# Get the last file
 		last = files.pop()
@@ -143,10 +152,7 @@ if __name__ == '__main__':
 
 		# Create the full URL
 		url = base_url + rel_url
-		
-		# Get Authorisation details
-		auth = get_auth()
-		
+				
 		# Download the file
 		filename = 'downloads/' + rel_url
 		lm = download_file(url, filename, auth)

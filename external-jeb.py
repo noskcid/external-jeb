@@ -6,6 +6,7 @@ from os.path import isdir, dirname
 from os import mkdir, makedirs
 import getpass
 
+
 # When in debug mode, avoids making requests, uses local copies instead.
 debug = True
 
@@ -23,7 +24,9 @@ def get_module_page(url, auth):
 
 # Download the file from the given url to the file given by filename. 
 def download_file(url, filename, auth):
+	
 	r = requests.get(url, auth=auth, stream=True)
+	
 	if r.status_code == 200:
 		try:
 			f = open(filename, 'wb')
@@ -36,10 +39,20 @@ def download_file(url, filename, auth):
 				f = open(filename, 'wb')
 			except IOError:
 				return False
-		for chunk in r:
+		chunk_size = 512
+		file_size = int(r.headers['Content-Length'])
+		# Cheeky little line to ensure %complete not greater than 100%
+		(q,rem) = divmod(file_size, chunk_size)
+		if rem > 0:
+			file_size = (q + 1) * chunk_size 
+		completed = 0
+		for chunk in r.iter_content(chunk_size=chunk_size):
 			f.write(chunk)
-
+			completed = completed + chunk_size
+			progress = (float(completed) / float(file_size))*100
+			print '\r{0} [{1}] {2:.1f}%'.format(filename, '#'*(int(progress/10)), progress),
 		f.close()
+		print '\n',
 		return True
 	else:
 		return False
@@ -98,6 +111,10 @@ def get_ref_debug_files():
 
 
 if __name__ == '__main__':
+	# Removes an annoying urllib3 warning on every request. 
+	# For the record, the warning is an InsecurePlatformWarning
+	# "A true SSLContext object is not available"
+	requests.packages.urllib3.disable_warnings()
 	# Essentially, if in debug mode we don't need auth details (would get pretty
 	# tiresome entering details everytime). Although first run of debug mode need
 	# to download offline files to use.

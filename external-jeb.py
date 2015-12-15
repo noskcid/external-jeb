@@ -4,6 +4,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 from os.path import isdir, dirname
 from os import mkdir, makedirs
+from urllib import unquote_plus
 import getpass
 
 
@@ -127,40 +128,39 @@ if __name__ == '__main__':
 	else:
 		auth = get_auth()
 		
-	# Start by loading a module page into BeautifulSoup.
-	module = get_module_page('ref/module.html',auth)
-	if module:
-		bs = BeautifulSoup(module, 'html.parser')
-		base_url = "https://www.elec.york.ac.uk/internal_web/meng/yr4/modules/Sig_Proc/Theory_and_Practice/"
+	# Module Page to scrape.
+	base_url = "https://www.elec.york.ac.uk/internal_web/meng/yr4/modules/Sig_Proc/Theory_and_Practice/"
 
-		# Get Authorisation details
-		auth = get_auth()
+	# Local directory to save files.
+	folder = 'downloads/SigProcTheory/'
 
-		# Compile regular expression to find PDFs.
-		type_re = re.compile('.*\.pdf')
+	# Get Authorisation details.
+	auth = get_auth()
+	
+	# Get module page.
+	module_page = get_page(base_url, auth)
+	if module_page:
+		bs = BeautifulSoup(get_page(base_url, auth), 'html.parser')
+
+		# Compile regular expression to find common file types.
+		type_re = re.compile('.*\.(pdf|docx|doc|ppt)')
 
 		# Get all the file URLs matching the regex.
 		files = get_files(bs, type_re)
 
 		print "Found {0} matching files.".format(len(files))
-		
-		# Get the last file
-		last = files.pop()
-		
-		# Get its URL
-		rel_url = last.get('href')
+			
+		# Download the files
+		for f in files:
+			# Get its URL
+			rel_url = f.get('href')
 
-		# Create the full URL
-		url = base_url + rel_url
-				
-		# Download the file
-		filename = 'downloads/' + rel_url
-		lm = download_file(url, filename, auth)
-		if lm:
-			print "Successfully downloaded to: " + filename
-		else:
-			print "Download unsuccessful."
+			# Create the full URL
+			url = base_url + rel_url
 
+			filename = folder + rel_url
+			lm = download_file(url, unquote_plus(filename), auth)
+			if not lm:
+				print "Download unsuccessful: " + url
 	else:
-		print "Couldn't open file"
-	
+		print "Could not download module page: " + base_url

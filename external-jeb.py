@@ -2,14 +2,13 @@ from bs4 import BeautifulSoup
 import re
 import requests
 from requests.auth import HTTPBasicAuth
-from os.path import isdir, dirname
+from os.path import isdir, dirname, exists, getmtime
 from os import mkdir, makedirs
 from urllib import unquote_plus
 import getpass
-
-
-# When in debug mode, avoids making requests, uses local copies instead.
-debug = True
+import argparse
+from datetime import datetime
+from sys import exit
 
 # Load a module page from a URL.
 def get_module_page(url, auth):
@@ -29,6 +28,23 @@ def download_file(url, filename, auth):
 	r = requests.get(url, auth=auth, stream=True)
 	
 	if r.status_code == 200:
+		if exists(filename):
+			# Keep an eye on this, subject to change.
+			strp_string = '%a, %d %b %Y %H:%M:%S %Z'
+			last_mod = r.headers['Last-Modified']
+
+			# Date the file was last updated on the server.
+			online_date = datetime.strptime(last_mod, strp_string)
+
+			# Date the file was last modified locally.
+			local_date = datetime.fromtimestamp(getmtime(filename))
+
+			if local_date > online_date:
+				print "Local file up to date: " + filename
+				return False
+			else:
+				print "New version available."
+
 		try:
 			f = open(filename, 'wb')
 		except IOError:
@@ -94,45 +110,28 @@ def get_auth():
 	password = getpass.getpass('Password: ')
 	return (username,password)
 
-# If in debug mode, download ref files for offline testing. 
-def get_ref_debug_files():
-	# For now we just need to get. dat. module. page (sig proc)
-	auth = get_auth()
-	p = get_page("https://www.elec.york.ac.uk/internal_web/meng/yr4/modules/Sig_Proc/Theory_and_Practice/", auth)
-	if not p:
-		return False
-	# Make the ref directory
-	try:
-		mkdir('ref')
-	except:
-		return False
-	f = open('ref/module.html','w')
-	f.write(p)
-	return True
-
 
 if __name__ == '__main__':
 	# Removes an annoying urllib3 warning on every request. 
 	# For the record, the warning is an InsecurePlatformWarning
 	# "A true SSLContext object is not available"
 	requests.packages.urllib3.disable_warnings()
-	# Essentially, if in debug mode we don't need auth details (would get pretty
-	# tiresome entering details everytime). Although first run of debug mode need
-	# to download offline files to use.
-	if debug:
-		# Assume if no ref folder, the offline files need downloading.
-		if not isdir('ref'):
-			if not get_ref_debug_files():
-				raise Exception # Eurgh so crude.
-		auth = False
-	else:
-		auth = get_auth()
-		
+
+	parser = argparse.ArgumentParser(prog='external-jeb')
+	parser.add_argument('url', metavar='url', help='URL of page to retrieve files from')
+	parser.add_argument('-o', metavar='output_folder', help='Output folder for downloaded files', default='')
+	parser.add_argument('ext', nargs='*', help='Extentions to search (default pdf)', default=['pdf'])
+	args = parser.parse_args()
+
+	types_re_list = args.ext[0]
+	for ext in args.ext[1:]:
+		types_re_list = types_re_list + '|' + ext
+
 	# Module Page to scrape.
-	base_url = "https://www.elec.york.ac.uk/internal_web/meng/yr4/modules/Sig_Proc/Theory_and_Practice/"
+	base_url = args.url
 
 	# Local directory to save files.
-	folder = 'downloads/SigProcTheory/'
+	folder = args.o
 
 	# Get Authorisation details.
 	auth = get_auth()
@@ -142,8 +141,8 @@ if __name__ == '__main__':
 	if module_page:
 		bs = BeautifulSoup(get_page(base_url, auth), 'html.parser')
 
-		# Compile regular expression to find common file types.
-		type_re = re.compile('.*\.(pdf|docx|doc|ppt)')
+		# Compile regular expression to find file types.
+		type_re = re.compile('.*\.('+types_re_list+')')
 
 		# Get all the file URLs matching the regex.
 		files = get_files(bs, type_re)

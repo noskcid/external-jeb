@@ -12,8 +12,18 @@ Recreate the enviroment.
 
 `pip install -r requirements.txt`
 
-Run the script.
+Run the script. :ok_hand:
 
-`python external-jeb.py` :ok_hand:
+```
+usage: external-jeb [-h] [-o output_folder] url [ext [ext ...]]
+
+positional arguments:
+  url               URL of page to retrieve files from
+  ext               Extentions to search (default pdf)
+
+optional arguments:
+  -h, --help        show this help message and exit
+  -o output_folder  Output folder for downloaded files
+```
 
 :see_no_evil: :hear_no_evil: :speak_no_evil: 

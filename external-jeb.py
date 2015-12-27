@@ -128,7 +128,7 @@ if __name__ == '__main__':
 		types_re_list = types_re_list + '|' + ext
 
 	# Module Page to scrape.
-	base_url = args.url
+	base_url = dirname(args.url)
 
 	# Local directory to save files.
 	folder = args.o
@@ -137,9 +137,9 @@ if __name__ == '__main__':
 	auth = get_auth()
 	
 	# Get module page.
-	module_page = get_page(base_url, auth)
+	module_page = get_page(args.url, auth)
 	if module_page:
-		bs = BeautifulSoup(get_page(base_url, auth), 'html.parser')
+		bs = BeautifulSoup(module_page, 'html.parser')
 
 		# Compile regular expression to find file types.
 		type_re = re.compile('.*\.('+types_re_list+')')
@@ -155,7 +155,7 @@ if __name__ == '__main__':
 			rel_url = f.get('href')
 
 			# Create the full URL
-			url = base_url + rel_url
+			url = base_url + '/' + rel_url
 
 			filename = folder + rel_url
 			lm = download_file(url, unquote_plus(filename), auth)
